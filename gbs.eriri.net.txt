@@ -1,0 +1,80 @@
+// ==UserScript==
+// @name         New Userscript
+// @namespace    https://gist.github.com/biuuu
+// @version      0.1
+// @description  try to take over the world!
+// @author       You
+// @match        https://gbs.eriri.net/
+// @grant        GM_setClipboard
+// ==/UserScript==
+
+(function() {
+ 'use strict'
+  const INTERVAL = 20    // 新ID最小触发间隔 ms
+  const TAG_TIME = 5000   // 新ID标记时间 ms
+
+  let timer
+  let lastid
+  const newTag = (node) => {
+    node.classList.add('new-copied-atcp')
+    setTimeout(() => {
+      node.classList.remove('new-copied-atcp')
+    }, TAG_TIME)
+  }
+  const clickNode = (node) => {
+    let secIndex = node.innerText.indexOf("秒")
+    let raidId = node.innerText.slice(secIndex+3,secIndex+11)
+
+    node.dataset.raidid = raidId
+    if (lastid === node.dataset.raidid) return
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      lastid = node.dataset.raidid
+      node.classList.add('gbfrf-tweet--copied')
+      newTag(node)
+      GM_setClipboard(lastid, 'text')
+    }, INTERVAL)
+  }
+  const start = () => {
+    const mutationCallback = (mutationsList) => {
+      for (let mutation of mutationsList) {
+        const type = mutation.type
+        const addedNodes = mutation.addedNodes
+        if (type === 'childList' && addedNodes.length && addedNodes.length < 2) {
+          Array.from(addedNodes).reverse().forEach(node => {
+            if (node.innerText) {
+              clickNode(node)
+            }
+          })
+        }
+      }
+    }
+
+    const obConfig = {
+      subtree: true,
+      childList: true
+    }
+
+    const targetNode = document.querySelector('.body')
+    const observer = new MutationObserver(mutationCallback)
+    observer.observe(targetNode, obConfig)
+
+    const addStyle = (css) => {
+      const style = document.createElement('style')
+      style.innerText = css
+      document.head.appendChild(style)
+    }
+
+    addStyle(`
+    .new-copied-atcp {
+      background-color: #41a840;
+    }
+    `)
+  }
+
+  if (window.unsafeWindow) {
+    unsafeWindow.addEventListener('load', start)
+  } else {
+    window.addEventListener('load', start)
+  }
+})();
